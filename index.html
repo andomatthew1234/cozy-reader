@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#FAF7F0" />
+    <meta name="description" content="A little reading, a little earning." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Cozy Reader" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon-192.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Cozy Reader</title>
+  </head>
+  <body>
+    <main class="app-shell" aria-live="polite">
+      <section class="screen screen--active" id="home-screen" data-screen="home" aria-labelledby="home-title">
+        <header class="page-header">
+          <p class="eyebrow">COZY READER</p>
+          <h1 id="home-title">Ready to read?</h1>
+          <p class="page-subtitle">Make a little space for your next chapter.</p>
+        </header>
+
+        <article class="timer-card" id="timer-card">
+          <div class="timer-card__topline">
+            <span class="timer-card__label">THIS SESSION</span>
+            <span class="status-pill is-hidden" id="paused-pill"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4l2.6 1.5"/><circle cx="12" cy="12" r="8.5"/></svg>Paused</span>
+          </div>
+          <output class="timer" id="timer" aria-label="Current reading time">00:00:00</output>
+          <div class="earnings-block">
+            <p>YOU’VE EARNED</p>
+            <output class="session-earnings" id="session-earnings">$0.00</output>
+          </div>
+          <div class="timer-actions" id="timer-actions"></div>
+        </article>
+
+        <aside class="gentle-note" aria-label="Reading tip">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5.5 4.5h10a3 3 0 0 1 3 3v11a1 1 0 0 1-1.6.8 5.8 5.8 0 0 0-7.2.3 1 1 0 0 1-1.4 0 5.8 5.8 0 0 0-7.2-.3 1 1 0 0 1-1.6-.8v-11a3 3 0 0 1 3-3h3"/><path d="M9.5 5v14"/></svg>
+          <p>Time spent with a good book is always time well spent.</p>
+        </aside>
+
+        <section class="install-guide is-hidden" id="install-guide" aria-label="Install Reading Tracker">
+          <button class="install-guide__dismiss icon-button" id="dismiss-install-guide" aria-label="Dismiss installation guide"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+          <div class="install-guide__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></div>
+          <div><strong>Add Reading Tracker to your Home Screen</strong><p>In Safari, tap <b>Share</b>, then choose <b>Add to Home Screen</b>.</p></div>
+        </section>
+      </section>
+
+      <section class="screen" id="balance-screen" data-screen="balance" aria-labelledby="balance-title" hidden>
+        <header class="page-header">
+          <p class="eyebrow">YOUR LITTLE LIBRARY</p>
+          <h1 id="balance-title">Your Reading<br />Balance</h1>
+        </header>
+        <article class="balance-hero">
+          <p>CURRENT BALANCE</p>
+          <output id="balance-amount">$0.00</output><span>AUD</span>
+        </article>
+        <article class="rate-summary">
+          <div class="rate-summary__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 6v6l4 2.5"/><circle cx="12" cy="12" r="8.5"/></svg></div>
+          <div><p>HOURLY RATE</p><strong id="balance-rate">$2.00</strong></div>
+          <span>per hour</span>
+        </article>
+        <button class="quiet-danger-button" id="open-reset-modal"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3.5 7h17M9 7V4.5h6V7m-9 0 .7 12.5h10.6L18 7M10 11v5m4-5v5"/></svg>Reset balance</button>
+      </section>
+
+      <section class="screen" id="settings-screen" data-screen="settings" aria-labelledby="settings-title" hidden>
+        <header class="page-header">
+          <p class="eyebrow">MAKE IT YOURS</p>
+          <h1 id="settings-title">Settings</h1>
+        </header>
+        <div class="settings-group">
+          <h2>Reading</h2>
+          <form class="settings-card" id="rate-form">
+            <label for="rate-input"><span>Hourly earning rate</span><small>Future reading uses this rate</small></label>
+            <div class="currency-input"><span>$</span><input id="rate-input" inputmode="decimal" type="number" min="0" max="9999.99" step="0.01" value="2.00" aria-describedby="rate-help" /><span>AUD</span></div>
+            <button type="submit" class="small-primary-button">Save rate</button>
+            <p class="form-message" id="rate-help">Completed earnings always stay exactly as earned.</p>
+          </form>
+        </div>
+        <div class="settings-group">
+          <h2>Appearance</h2>
+          <article class="settings-row"><div class="theme-swatch" aria-hidden="true"></div><div><strong>Cozy Reader</strong><p>Light</p></div><svg class="check-icon" aria-label="Selected" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4L19 7"/></svg></article>
+        </div>
+        <div class="settings-group about-group">
+          <h2>About</h2>
+          <article class="settings-row"><div><strong>Reading Tracker</strong><p>A little reading, a little earning.</p></div><span>v1.0.0</span></article>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-item is-active" data-tab="home" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3.5 10.5 8.5-7 8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+      <button class="nav-item" data-tab="balance"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 16.5z"/><path d="M8 12h8m-5-3v6"/></svg><span>Balance</span></button>
+      <button class="nav-item" data-tab="settings"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.2 13.3a1.7 1.7 0 0 0 .3 1.9l.1.1-2.3 2.3-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3.2v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.3-2.3.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1h-.2V9.1h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.3-2.3.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3.2v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.3 2.3-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v3.2h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Settings</span></button>
+    </nav>
+
+    <div class="modal-backdrop is-hidden" id="reset-modal" role="dialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-description">
+      <section class="modal-card">
+        <div class="modal-icon modal-icon--danger"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01"/><path d="m10.1 4.1-7 12.1a2 2 0 0 0 1.7 3h14.4a2 2 0 0 0 1.7-3l-7-12.1a2 2 0 0 0-3.5 0Z"/></svg></div>
+        <h2 id="reset-title">Reset your balance?</h2>
+        <p id="reset-description">This will set your current reading balance back to $0.00. This action cannot be undone.</p>
+        <div class="modal-actions"><button class="secondary-button" id="cancel-reset">Cancel</button><button class="danger-button" id="confirm-reset">Reset Balance</button></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop is-hidden" id="completion-modal" role="dialog" aria-modal="true" aria-labelledby="completion-title">
+      <section class="modal-card completion-card">
+        <div class="completion-book" aria-hidden="true">📖</div>
+        <p class="eyebrow">SESSION COMPLETE</p>
+        <h2 id="completion-title">Lovely reading!</h2>
+        <p id="completion-duration">You read for 0 minutes.</p>
+        <output id="completion-earnings">+$0.00 earned</output>
+        <button class="primary-button" id="close-completion">Done</button>
+      </section>
+    </div>
+    <div class="toast is-hidden" id="toast" role="status"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
