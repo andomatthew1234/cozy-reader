@@ -1,4 +1,4 @@
-const CACHE_NAME = "cozy-reader-shell-v1";
+const CACHE_NAME = "cozy-reader-shell-v2";
 const APP_SHELL = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {

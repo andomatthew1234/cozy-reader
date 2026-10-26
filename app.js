@@ -251,6 +251,8 @@ function setModal(modal, visible) {
   modal.classList.toggle("is-hidden", !visible);
 }
 
+// Render an interactive, safe default immediately. Storage hydration happens in the
+// background so a slow/blocked IndexedDB open can never make the main controls vanish.
 let state = defaultState();
 let busy = false;
 
@@ -360,8 +362,21 @@ window.addEventListener("pageshow", () => render());
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch((error) => console.warn("Service worker unavailable", error));
 
-state = await Store.read();
-render();
+function initialise() {
+  // This first paint deliberately comes before any asynchronous storage access.
+  render();
+  Store.read()
+    .then((saved) => {
+      state = saved;
+      render();
+    })
+    .catch((error) => {
+      console.warn("Could not restore saved reading state", error);
+      render();
+    });
+}
+
+initialise();
 window.setInterval(() => {
   if (!document.hidden && state.session?.status === "running") {
     const session = liveSession(state.session);
