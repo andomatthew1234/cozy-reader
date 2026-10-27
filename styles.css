@@ -40,8 +40,8 @@ svg { width: 1.35em; height: 1.35em; fill: none; stroke: currentColor; stroke-wi
 .app-shell { width: min(100%, 680px); margin: 0 auto; padding: max(28px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) calc(118px + env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left)); }
 .screen { container-type: inline-size; }
 @keyframes screen-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
-.app-shell.is-transitioning { display: grid; }
-.app-shell.is-transitioning > .screen { min-width: 0; grid-area: 1 / 1; }
+.app-shell.is-transitioning { display: grid; grid-template-columns: minmax(0, 1fr); }
+.app-shell.is-transitioning > .screen { width: 100%; min-width: 0; grid-area: 1 / 1; }
 .screen--outgoing { z-index: 0; pointer-events: none; animation: page-out var(--motion-page) var(--ease-native) both; }
 .screen--incoming { z-index: 1; animation: page-in var(--motion-page) var(--ease-native) both; }
 @keyframes page-out { to { opacity: 0; transform: translate3d(-10px, 0, 0) scale(.995); } }
