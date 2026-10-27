@@ -1,7 +1,7 @@
 {
   "name": "Cozy Reader — Reading Tracker",
   "short_name": "Cozy Reader",
-  "description": "A little reading, a little earning.",
+  "description": "Track books, reading time and savings progress in one cozy place.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

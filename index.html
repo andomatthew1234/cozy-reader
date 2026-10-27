@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#FAF7F0" />
-    <meta name="description" content="A little reading, a little earning." />
+    <meta name="theme-color" content="#faf7f0" />
+    <meta name="description" content="A thoughtful reading companion that turns pages into progress." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Cozy Reader" />
@@ -20,104 +20,65 @@
   <body>
     <main class="app-shell" aria-live="polite">
       <section class="screen screen--active" id="home-screen" data-screen="home" aria-labelledby="home-title">
-        <header class="page-header">
-          <p class="eyebrow">COZY READER</p>
-          <h1 id="home-title">Ready to read?</h1>
-          <p class="page-subtitle">Make a little space for your next chapter.</p>
-        </header>
-
+        <header class="page-header"><p class="eyebrow">COZY READER</p><h1 id="home-title">Ready to read?</h1><p class="page-subtitle">Make a little space for your next chapter.</p></header>
+        <aside class="storage-warning is-hidden" id="storage-warning" role="alert"><strong>Cozy Reader needs a quick refresh</strong><p>Close any other Cozy Reader tabs or app windows, then reload this page to finish the safe data upgrade.</p></aside>
         <article class="timer-card" id="timer-card">
-          <div class="timer-card__topline">
-            <span class="timer-card__label">THIS SESSION</span>
-            <span class="status-pill is-hidden" id="paused-pill"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4l2.6 1.5"/><circle cx="12" cy="12" r="8.5"/></svg>Paused</span>
-          </div>
+          <div class="timer-card__topline"><span class="timer-card__label">THIS SESSION</span><span class="status-pill is-hidden" id="paused-pill"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4l2.6 1.5"/><circle cx="12" cy="12" r="8.5"/></svg>Paused</span></div>
           <output class="timer" id="timer" aria-label="Current reading time">00:00:00</output>
-          <div class="earnings-block">
-            <p>YOU’VE EARNED</p>
-            <output class="session-earnings" id="session-earnings">$0.00</output>
-          </div>
+          <div class="earnings-block"><p>YOU’VE EARNED</p><output class="session-earnings" id="session-earnings">$0.00</output></div>
+          <div class="current-book is-hidden" id="current-book-card"><div class="mini-cover" id="current-book-cover" aria-hidden="true"></div><div><span>Currently reading</span><strong id="current-book-title">Just Reading</strong></div><button class="text-button" id="change-book">Change</button></div>
           <div class="timer-actions" id="timer-actions"></div>
+          <button class="timer-link is-hidden" id="adjust-time"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/><path d="M5 3v4h4"/></svg>Adjust Time</button>
+          <div class="wake-row"><div><strong>Keep screen awake</strong><small id="wake-status">Available while actively reading</small></div><label class="switch"><input id="wake-toggle" type="checkbox" /><span aria-hidden="true"></span><span class="sr-only">Keep screen awake</span></label></div>
         </article>
+        <div data-goal-host="compact"></div>
+        <aside class="gentle-note" aria-label="Reading tip"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5.5 4.5h10a3 3 0 0 1 3 3v11a1 1 0 0 1-1.6.8 5.8 5.8 0 0 0-7.2.3 1 1 0 0 1-1.4 0 5.8 5.8 0 0 0-7.2-.3 1 1 0 0 1-1.6-.8v-11a3 3 0 0 1 3-3h3"/><path d="M9.5 5v14"/></svg><p>Time spent with a good book is always time well spent.</p></aside>
+        <section class="install-guide is-hidden" id="install-guide" aria-label="Install Cozy Reader"><button class="install-guide__dismiss icon-button" id="dismiss-install-guide" aria-label="Dismiss installation guide"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button><div class="install-guide__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></div><div><strong>Add Cozy Reader to your Home Screen</strong><p>In Safari, tap <b>Share</b>, then choose <b>Add to Home Screen</b>.</p></div></section>
+      </section>
 
-        <aside class="gentle-note" aria-label="Reading tip">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5.5 4.5h10a3 3 0 0 1 3 3v11a1 1 0 0 1-1.6.8 5.8 5.8 0 0 0-7.2.3 1 1 0 0 1-1.4 0 5.8 5.8 0 0 0-7.2-.3 1 1 0 0 1-1.6-.8v-11a3 3 0 0 1 3-3h3"/><path d="M9.5 5v14"/></svg>
-          <p>Time spent with a good book is always time well spent.</p>
-        </aside>
-
-        <section class="install-guide is-hidden" id="install-guide" aria-label="Install Reading Tracker">
-          <button class="install-guide__dismiss icon-button" id="dismiss-install-guide" aria-label="Dismiss installation guide"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
-          <div class="install-guide__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></div>
-          <div><strong>Add Reading Tracker to your Home Screen</strong><p>In Safari, tap <b>Share</b>, then choose <b>Add to Home Screen</b>.</p></div>
-        </section>
+      <section class="screen" id="books-screen" data-screen="books" aria-labelledby="books-title" hidden>
+        <div id="books-library-view">
+          <header class="page-header page-header--action"><div><p class="eyebrow">YOUR LITTLE LIBRARY</p><h1 id="books-title">My Books</h1><p class="page-subtitle">Keep every story close.</p></div><button class="round-action" id="add-book"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add Book</span></button></header>
+          <div data-goal-host="compact"></div>
+          <div class="book-grid" id="book-grid"></div>
+          <div class="empty-state is-hidden" id="books-empty"><div class="empty-state__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22zM20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22z"/></svg></div><h2>Your next chapter starts here</h2><p>Add a book to track pages, reading time and earnings.</p><button class="primary-button" id="empty-add-book">Add your first book</button></div>
+        </div>
+        <div class="book-detail is-hidden" id="book-detail-view"></div>
       </section>
 
       <section class="screen" id="balance-screen" data-screen="balance" aria-labelledby="balance-title" hidden>
-        <header class="page-header">
-          <p class="eyebrow">YOUR LITTLE LIBRARY</p>
-          <h1 id="balance-title">Your Reading<br />Balance</h1>
-        </header>
-        <article class="balance-hero">
-          <p>CURRENT BALANCE</p>
-          <output id="balance-amount">$0.00</output><span>AUD</span>
-        </article>
-        <article class="rate-summary">
-          <div class="rate-summary__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 6v6l4 2.5"/><circle cx="12" cy="12" r="8.5"/></svg></div>
-          <div><p>HOURLY RATE</p><strong id="balance-rate">$2.00</strong></div>
-          <span>per hour</span>
-        </article>
+        <header class="page-header"><p class="eyebrow">EVERY PAGE ADDS UP</p><h1 id="balance-title">Your Reading<br />Balance</h1></header>
+        <article class="balance-hero"><p>CURRENT BALANCE</p><output id="balance-amount">$0.00</output><span>AUD</span></article>
+        <div data-goal-host="full"></div>
+        <article class="rate-summary"><div class="rate-summary__icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 6v6l4 2.5"/><circle cx="12" cy="12" r="8.5"/></svg></div><div><p>HOURLY RATE</p><strong id="balance-rate">$2.00</strong></div><span>per hour</span></article>
         <button class="quiet-danger-button" id="open-reset-modal"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3.5 7h17M9 7V4.5h6V7m-9 0 .7 12.5h10.6L18 7M10 11v5m4-5v5"/></svg>Reset balance</button>
       </section>
 
       <section class="screen" id="settings-screen" data-screen="settings" aria-labelledby="settings-title" hidden>
-        <header class="page-header">
-          <p class="eyebrow">MAKE IT YOURS</p>
-          <h1 id="settings-title">Settings</h1>
-        </header>
-        <div class="settings-group">
-          <h2>Reading</h2>
-          <form class="settings-card" id="rate-form">
-            <label for="rate-input"><span>Hourly earning rate</span><small>Future reading uses this rate</small></label>
-            <div class="currency-input"><span>$</span><input id="rate-input" inputmode="decimal" type="number" min="0" max="9999.99" step="0.01" value="2.00" aria-describedby="rate-help" /><span>AUD</span></div>
-            <button type="submit" class="small-primary-button">Save rate</button>
-            <p class="form-message" id="rate-help">Completed earnings always stay exactly as earned.</p>
-          </form>
-        </div>
-        <div class="settings-group">
-          <h2>Appearance</h2>
-          <article class="settings-row"><div class="theme-swatch" aria-hidden="true"></div><div><strong>Cozy Reader</strong><p>Light</p></div><svg class="check-icon" aria-label="Selected" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4L19 7"/></svg></article>
-        </div>
-        <div class="settings-group about-group">
-          <h2>About</h2>
-          <article class="settings-row"><div><strong>Reading Tracker</strong><p>A little reading, a little earning.</p></div><span>v1.0.0</span></article>
-        </div>
+        <header class="page-header"><p class="eyebrow">MAKE IT YOURS</p><h1 id="settings-title">Settings</h1></header>
+        <div data-goal-host="compact"></div>
+        <div class="settings-group"><h2>Reading</h2><form class="settings-card" id="rate-form"><label for="rate-input"><span>Hourly earning rate</span><small>Future reading uses this rate</small></label><div class="currency-input"><span>$</span><input id="rate-input" inputmode="decimal" type="number" min="0" max="9999.99" step="0.01" value="2.00" aria-describedby="rate-help" /><span>AUD</span></div><button type="submit" class="small-primary-button">Save rate</button><p class="form-message" id="rate-help">Completed earnings always stay exactly as earned.</p></form></div>
+        <div class="settings-group"><h2>Savings Goal</h2><form class="settings-card" id="goal-form"><label for="goal-name"><span>What are you saving for?</span><small>Your reading balance becomes your progress</small></label><input class="field" id="goal-name" maxlength="100" placeholder="New headphones" /><label for="goal-target"><span>Target amount</span></label><div class="currency-input"><span>$</span><input id="goal-target" inputmode="decimal" type="number" min="0.01" max="1000000" step="0.01" placeholder="100.00" /><span>AUD</span></div><div class="inline-actions"><button type="submit" class="small-primary-button">Save goal</button><button type="button" class="text-danger is-hidden" id="delete-goal">Delete goal</button></div></form></div>
+        <div class="settings-group"><h2>Reading Reminders</h2><form class="settings-card" id="reminder-form"><div class="settings-toggle-row"><div><strong>Reading reminder</strong><small>Time for a little reading 📖</small></div><label class="switch"><input id="reminder-enabled" type="checkbox" /><span aria-hidden="true"></span><span class="sr-only">Enable reading reminders</span></label></div><label for="reminder-time"><span>Reminder time</span></label><input class="field" id="reminder-time" type="time" value="19:00" /><fieldset class="weekday-picker"><legend>Days</legend><label><input type="checkbox" value="1" /><span>M</span></label><label><input type="checkbox" value="2" /><span>T</span></label><label><input type="checkbox" value="3" /><span>W</span></label><label><input type="checkbox" value="4" /><span>T</span></label><label><input type="checkbox" value="5" /><span>F</span></label><label><input type="checkbox" value="6" /><span>S</span></label><label><input type="checkbox" value="0" /><span>S</span></label></fieldset><button type="submit" class="small-primary-button">Save reminder</button><p class="capability-note" id="reminder-note">Reminders work while Cozy Reader is open. Reliable closed-app reminders on iOS require a push service, which is not included.</p></form></div>
+        <div class="settings-group"><h2>Feel</h2><article class="settings-row settings-row--toggle"><div><strong>Haptic feedback</strong><p id="haptic-status">Subtle feedback where supported</p></div><label class="switch"><input id="haptic-toggle" type="checkbox" /><span aria-hidden="true"></span><span class="sr-only">Haptic feedback</span></label></article></div>
+        <div class="settings-group about-group"><h2>About</h2><article class="settings-row"><div><strong>Cozy Reader</strong><p>A little reading, a little earning.</p></div><span>v2.0.0</span></article></div>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Main navigation">
       <button class="nav-item is-active" data-tab="home" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></button>
+      <button class="nav-item" data-tab="books"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22zM20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22z"/></svg><span>My Books</span></button>
       <button class="nav-item" data-tab="balance"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7V6a2 2 0 0 0-2-2H5a3 3 0 0 0 0 6h15v8a2 2 0 0 1-2 2H5a3 3 0 0 1-3-3V7"/><path d="M16 14h.01"/></svg><span>Balance</span></button>
       <button class="nav-item" data-tab="settings"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h9m4 0h3M4 17h3m4 0h9M13 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm2 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg><span>Settings</span></button>
     </nav>
 
-    <div class="modal-backdrop is-hidden" id="reset-modal" role="dialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-description">
-      <section class="modal-card">
-        <div class="modal-icon modal-icon--danger"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01"/><path d="m10.1 4.1-7 12.1a2 2 0 0 0 1.7 3h14.4a2 2 0 0 0 1.7-3l-7-12.1a2 2 0 0 0-3.5 0Z"/></svg></div>
-        <h2 id="reset-title">Reset your balance?</h2>
-        <p id="reset-description">This will set your current reading balance back to $0.00. This action cannot be undone.</p>
-        <div class="modal-actions"><button class="secondary-button" id="cancel-reset">Cancel</button><button class="danger-button" id="confirm-reset">Reset Balance</button></div>
-      </section>
-    </div>
-
-    <div class="modal-backdrop is-hidden" id="completion-modal" role="dialog" aria-modal="true" aria-labelledby="completion-title">
-      <section class="modal-card completion-card">
-        <div class="completion-book" aria-hidden="true">📖</div>
-        <p class="eyebrow">SESSION COMPLETE</p>
-        <h2 id="completion-title">Lovely reading!</h2>
-        <p id="completion-duration">You read for 0 minutes.</p>
-        <output id="completion-earnings">+$0.00 earned</output>
-        <button class="primary-button" id="close-completion">Done</button>
-      </section>
-    </div>
+    <div class="modal-backdrop is-hidden" id="reset-modal" role="dialog" aria-modal="true" aria-labelledby="reset-title"><section class="modal-card"><div class="modal-icon modal-icon--danger"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01"/><path d="m10.1 4.1-7 12.1a2 2 0 0 0 1.7 3h14.4a2 2 0 0 0 1.7-3l-7-12.1a2 2 0 0 0-3.5 0Z"/></svg></div><h2 id="reset-title">Reset your balance?</h2><p>This sets your reading balance to $0.00. Your books and savings goal stay safe.</p><div class="modal-actions"><button class="secondary-button" data-close="reset-modal">Cancel</button><button class="danger-button" id="confirm-reset">Reset Balance</button></div></section></div>
+    <div class="modal-backdrop is-hidden" id="completion-modal" role="dialog" aria-modal="true" aria-labelledby="completion-title"><section class="modal-card completion-card"><div class="completion-book" aria-hidden="true">📖</div><p class="eyebrow">SESSION COMPLETE</p><h2 id="completion-title">Lovely reading!</h2><p id="completion-duration">You read for 0 minutes.</p><output id="completion-earnings">+$0.00 earned</output><button class="secondary-button undo-button" id="undo-stop"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg>Undo Stop</button><button class="primary-button" id="close-completion">Done</button></section></div>
+    <div class="modal-backdrop sheet-backdrop is-hidden" id="book-sheet" role="dialog" aria-modal="true" aria-labelledby="book-form-title"><section class="bottom-sheet"><div class="sheet-handle" aria-hidden="true"></div><div class="sheet-heading"><div><p class="eyebrow">MY LIBRARY</p><h2 id="book-form-title">Add a book</h2></div><button class="icon-button" data-close="book-sheet" aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div><form id="book-form"><input id="book-id" type="hidden" /><label for="book-title">Book title <b>*</b></label><input class="field" id="book-title" required maxlength="180" placeholder="The Night Circus" /><label for="book-author">Author</label><input class="field" id="book-author" maxlength="180" placeholder="Erin Morgenstern" /><div class="form-grid"><div><label for="book-total-pages">Total pages</label><input class="field" id="book-total-pages" type="number" min="1" max="1000000" inputmode="numeric" placeholder="Optional" /></div><div><label for="book-current-page">Current page</label><input class="field" id="book-current-page" type="number" min="0" max="1000000" inputmode="numeric" value="0" /></div></div><label for="book-cover">Cover image</label><label class="upload-field"><input id="book-cover" type="file" accept="image/*" /><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"/></svg><span>Choose an image</span></label><label class="check-row is-hidden" id="remove-cover-row"><input id="remove-cover" type="checkbox" /> Remove current cover</label><p class="form-message" id="book-form-message"></p><button class="primary-button" type="submit">Save book</button></form></section></div>
+    <div class="modal-backdrop sheet-backdrop is-hidden" id="book-picker" role="dialog" aria-modal="true" aria-labelledby="book-picker-title"><section class="bottom-sheet bottom-sheet--tall"><div class="sheet-handle" aria-hidden="true"></div><div class="sheet-heading"><div><p class="eyebrow">SETTLE IN</p><h2 id="book-picker-title">What are you reading?</h2></div><button class="icon-button" data-close="book-picker" aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div><div class="picker-grid" id="book-picker-grid"></div><button class="skip-reading-button" data-pick-book=""><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M19 4v16M9 12h6"/></svg><span><strong>Just Reading</strong><small>Skip book selection</small></span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></section></div>
+    <div class="modal-backdrop sheet-backdrop is-hidden" id="adjust-sheet" role="dialog" aria-modal="true" aria-labelledby="adjust-title"><section class="bottom-sheet"><div class="sheet-handle" aria-hidden="true"></div><div class="sheet-heading"><div><p class="eyebrow">CORRECT YOUR SESSION</p><h2 id="adjust-title">Adjust Time</h2></div><button class="icon-button" data-close="adjust-sheet" aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div><form id="adjust-form"><div class="segmented-control"><label><input type="radio" name="adjust-direction" value="add" checked /><span>Add</span></label><label><input type="radio" name="adjust-direction" value="remove" /><span>Remove</span></label></div><div class="form-grid"><div><label for="adjust-hours">Hours</label><input class="field" id="adjust-hours" type="number" min="0" max="999" value="0" inputmode="numeric" /></div><div><label for="adjust-minutes">Minutes</label><input class="field" id="adjust-minutes" type="number" min="0" max="59" value="0" inputmode="numeric" /></div></div><label for="adjust-book">Attribute this time to</label><select class="field" id="adjust-book"></select><div class="adjust-preview" id="adjust-preview"><span>Resulting session</span><strong>00:00:00 · $0.00</strong></div><p class="form-message" id="adjust-message"></p><button class="primary-button" type="submit">Apply adjustment</button></form></section></div>
+    <div class="modal-backdrop is-hidden" id="delete-book-modal" role="dialog" aria-modal="true" aria-labelledby="delete-book-title"><section class="modal-card"><div class="modal-icon modal-icon--danger"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3.5 7h17M9 7V4.5h6V7m-9 0 .7 12.5h10.6L18 7"/></svg></div><h2 id="delete-book-title">Delete this book?</h2><p>Your overall balance will not change. This book’s saved cover and reading history will be removed.</p><div class="modal-actions"><button class="secondary-button" data-close="delete-book-modal">Cancel</button><button class="danger-button" id="confirm-delete-book">Delete Book</button></div></section></div>
+    <div class="modal-backdrop is-hidden" id="delete-goal-modal" role="dialog" aria-modal="true" aria-labelledby="delete-goal-title"><section class="modal-card"><div class="modal-icon modal-icon--danger"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg></div><h2 id="delete-goal-title">Delete your savings goal?</h2><p>Your reading balance will stay exactly as it is.</p><div class="modal-actions"><button class="secondary-button" data-close="delete-goal-modal">Cancel</button><button class="danger-button" id="confirm-delete-goal">Delete Goal</button></div></section></div>
     <div class="toast is-hidden" id="toast" role="status"></div>
     <script type="module" src="app.js"></script>
   </body>
