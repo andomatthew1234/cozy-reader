@@ -1,6 +1,66 @@
 export const RATE_DENOMINATOR = 3_600_000;
 export const APP_SCHEMA = 2;
 
+const OPEN_LIBRARY_FIELDS = [
+  "key", "title", "author_name", "first_publish_year", "cover_i", "cover_edition_key", "publisher", "publish_year", "edition_count",
+  "editions", "editions.key", "editions.title", "editions.cover_i", "editions.publisher", "editions.publish_date",
+];
+
+export function buildOpenLibrarySearchUrl(query, limit = 18) {
+  const safeLimit = finiteInteger(limit, 18, 1, 30);
+  const url = new URL("https://openlibrary.org/search.json");
+  url.searchParams.set("q", String(query || "").trim());
+  url.searchParams.set("fields", OPEN_LIBRARY_FIELDS.join(","));
+  url.searchParams.set("limit", String(safeLimit));
+  return url.toString();
+}
+
+export function normaliseCoverSearchDocs(docs, limit = 18) {
+  if (!Array.isArray(docs)) return [];
+  const safeLimit = finiteInteger(limit, 18, 1, 30);
+  const seen = new Set();
+  const results = [];
+  const addResult = (candidate, doc, isEdition = false) => {
+    const coverId = Number(candidate?.cover_i);
+    const title = String(candidate?.title || doc?.title || "").trim();
+    if (!Number.isSafeInteger(coverId) || coverId <= 0 || !title || seen.has(coverId)) return;
+    seen.add(coverId);
+    const firstYear = Number(doc?.first_publish_year);
+    const publicationYear = Array.isArray(doc?.publish_year)
+      ? doc.publish_year.map(Number).find((year) => Number.isInteger(year) && year > 0)
+      : null;
+    const editionYearText = Array.isArray(candidate?.publish_date)
+      ? candidate.publish_date.map((value) => String(value || "")).join(" ")
+      : String(candidate?.publish_date || "");
+    const editionYear = Number(editionYearText.match(/\b(?:1[0-9]{3}|20[0-9]{2})\b/)?.[0]);
+    const publisherSource = isEdition ? candidate?.publisher : doc?.publisher;
+    const publisher = Array.isArray(publisherSource)
+      ? publisherSource.map((value) => String(value || "").trim()).find(Boolean) || ""
+      : "";
+    const author = Array.isArray(doc?.author_name)
+      ? doc.author_name.map((value) => String(value || "").trim()).find(Boolean) || ""
+      : "";
+    results.push({
+      coverId,
+      key: String(candidate?.key || doc?.key || ""),
+      title,
+      author,
+      publisher,
+      year: isEdition && Number.isInteger(editionYear) && editionYear > 0
+        ? editionYear
+        : (Number.isInteger(firstYear) && firstYear > 0 ? firstYear : (publicationYear || null)),
+      editionCount: finiteInteger(doc?.edition_count, 0, 0, 1_000_000),
+    });
+  };
+  for (const doc of docs) {
+    const editions = Array.isArray(doc?.editions?.docs) ? doc.editions.docs : [];
+    editions.forEach((edition) => addResult(edition, doc, true));
+    addResult(doc, doc, false);
+    if (results.length >= safeLimit) break;
+  }
+  return results.slice(0, safeLimit);
+}
+
 export function makeId(prefix = "item") {
   return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }

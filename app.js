@@ -1,6 +1,6 @@
 import {
-  RATE_DENOMINATOR, adjustSessionTime, attributedTime, changeSessionBook, continueSession, defaultState,
-  durationPhrase, finalizeStop, formatDuration, formatMoney, liveSession, makeId, normalise, pauseSession,
+  RATE_DENOMINATOR, adjustSessionTime, attributedTime, buildOpenLibrarySearchUrl, changeSessionBook, continueSession, defaultState,
+  durationPhrase, finalizeStop, formatDuration, formatMoney, liveSession, makeId, normalise, normaliseCoverSearchDocs, pauseSession,
   sessionAttribution, settleRunning, startSession, stopSession, undoStop,
 } from "./core.js";
 
@@ -21,6 +21,12 @@ const dom = {
   wakeToggle: $("#wake-toggle"), wakeStatus: $("#wake-status"), balance: $("#balance-amount"), balanceRate: $("#balance-rate"),
   rateInput: $("#rate-input"), rateForm: $("#rate-form"), bookGrid: $("#book-grid"), booksEmpty: $("#books-empty"),
   libraryView: $("#books-library-view"), detailView: $("#book-detail-view"), bookSheet: $("#book-sheet"), bookForm: $("#book-form"),
+  coverSearchSheet: $("#cover-search-sheet"), coverSearchForm: $("#cover-search-form"), coverSearchQuery: $("#cover-search-query"),
+  coverSearchSubmit: $("#cover-search-submit"), coverSearchStatus: $("#cover-search-status"), coverSearchResults: $("#cover-search-results"),
+  coverSearchPreview: $("#cover-search-preview"), coverSearchPreviewImage: $("#cover-search-preview-image"),
+  coverSearchPreviewTitle: $("#cover-search-preview-title"), coverSearchPreviewMeta: $("#cover-search-preview-meta"), useCover: $("#use-cover"),
+  bookCoverChoice: $("#book-cover-choice"), bookCoverChoiceImage: $("#book-cover-choice-image"),
+  bookCoverChoiceTitle: $("#book-cover-choice-title"), bookCoverChoiceNote: $("#book-cover-choice-note"),
   bookPicker: $("#book-picker"), pickerGrid: $("#book-picker-grid"), adjustSheet: $("#adjust-sheet"), adjustForm: $("#adjust-form"),
   settingsSheet: $("#settings-sheet"), settingsSheetContent: $("#settings-sheet-content"), settingsSheetTitle: $("#settings-sheet-title"),
   resetModal: $("#reset-modal"), completionModal: $("#completion-modal"), completionDuration: $("#completion-duration"),
@@ -129,6 +135,46 @@ const Store = (() => {
     return work;
   }
 
+  function updateWithCover(mutator, coverChange = null) {
+    const work = queue.then(async () => {
+      const database = await openDatabase();
+      if (fallback || !database) {
+        const draft = readFallback();
+        const result = mutator(draft, { coverStorage: false });
+        const clean = normalise(draft);
+        writeFallback(clean);
+        return { state: clean, result, coverStored: false };
+      }
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction([STATE_STORE, COVER_STORE], "readwrite");
+        const stateStore = transaction.objectStore(STATE_STORE);
+        const coverStore = transaction.objectStore(COVER_STORE);
+        const request = stateStore.get(RECORD_ID);
+        let clean;
+        let result;
+        request.onsuccess = () => {
+          try {
+            const draft = normalise(request.result?.value);
+            result = mutator(draft, { coverStorage: true });
+            clean = normalise(draft);
+            stateStore.put({ id: RECORD_ID, value: clean });
+            if (coverChange?.blob instanceof Blob) coverStore.put({ id: coverChange.id, blob: coverChange.blob });
+            else if (coverChange?.remove) coverStore.delete(coverChange.id);
+          } catch (error) {
+            transaction.abort();
+            reject(error);
+          }
+        };
+        request.onerror = () => reject(request.error || new Error("Unable to read reading storage"));
+        transaction.oncomplete = () => resolve({ state: clean, result, coverStored: Boolean(coverChange?.blob) });
+        transaction.onerror = () => reject(transaction.error || new Error("Book and cover update failed"));
+        transaction.onabort = () => reject(transaction.error || new Error("Book and cover update was cancelled"));
+      });
+    });
+    queue = work.catch(() => undefined);
+    return work;
+  }
+
   async function readCover(id) {
     const database = await openDatabase();
     if (fallback || !database) return null;
@@ -161,7 +207,7 @@ const Store = (() => {
     });
   }
 
-  return { read, update, readCover, writeCover, deleteCover };
+  return { read, update, updateWithCover, readCover, writeCover, deleteCover };
 })();
 
 let state = defaultState();
@@ -178,6 +224,12 @@ let bookFormBaseline = "";
 let adjustFormBaseline = "";
 let settingsSheetBaseline = "";
 let pendingDiscardModal = null;
+let pendingOnlineCover = null;
+let pendingCoverPreviewUrl = null;
+let selectedCoverResult = null;
+let coverSearchController = null;
+let coverSearchLastStartedAt = 0;
+let coverSearchRequestToken = 0;
 let bodyScrollPosition = 0;
 let tabTransitionBusy = false;
 let queuedTab = null;
@@ -185,10 +237,15 @@ let libraryScrollPosition = 0;
 const tabScrollPositions = new Map([["home", 0]]);
 const modalFocusOrigins = new WeakMap();
 const coverUrls = new Map();
+const coverSearchCache = new Map();
+const coverSearchResultsById = new Map();
 const settingsPanelsHost = $(".settings-panels");
 const settingsPanelOrder = $$('[data-settings-panel]');
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const MOTION = { modal: 220, page: 230, detail: 240, count: 680 };
+const COVER_SEARCH_LIMIT = 18;
+const COVER_SEARCH_MIN_INTERVAL = 1100;
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 const formatRate = (rateCents) => `$${(rateCents / 100).toFixed(2)}`;
@@ -249,6 +306,13 @@ function setModal(modal, visible) {
     syncModalEnvironment();
     window.setTimeout(() => modal.querySelector("button, input, select, [tabindex]:not([tabindex='-1'])")?.focus(), 0);
   } else {
+    if (modal === dom.coverSearchSheet) {
+      coverSearchController?.abort();
+      coverSearchController = null;
+      coverSearchRequestToken += 1;
+      resetCoverSearchSelection();
+    }
+    if (modal === dom.bookSheet) clearPendingCoverSelection();
     modal.inert = false;
     syncModalEnvironment();
     const open = $$('.modal-backdrop:not(.is-hidden)').at(-1);
@@ -708,8 +772,267 @@ async function pickBook(bookId) {
   finally { busy = false; }
 }
 
+function coverImageUrl(coverId, size = "M") {
+  return `https://covers.openlibrary.org/b/id/${encodeURIComponent(coverId)}-${size}.jpg?default=false`;
+}
+
+function clearBookCoverPreview() {
+  if (pendingCoverPreviewUrl) URL.revokeObjectURL(pendingCoverPreviewUrl);
+  pendingCoverPreviewUrl = null;
+  dom.bookCoverChoiceImage.removeAttribute("src");
+  dom.bookCoverChoice.classList.add("is-hidden");
+}
+
+function clearPendingCoverSelection({ clearPreview = true } = {}) {
+  pendingOnlineCover = null;
+  $("#selected-cover-id").value = "";
+  if (clearPreview) clearBookCoverPreview();
+}
+
+function showBookCoverPreview(blob, title, note) {
+  clearBookCoverPreview();
+  pendingCoverPreviewUrl = URL.createObjectURL(blob);
+  dom.bookCoverChoiceImage.src = pendingCoverPreviewUrl;
+  dom.bookCoverChoiceTitle.textContent = title;
+  dom.bookCoverChoiceNote.textContent = note;
+  dom.bookCoverChoice.classList.remove("is-hidden");
+}
+
+function coverResultMeta(result) {
+  return [result.publisher, result.year].filter(Boolean).join(" · ");
+}
+
+function setCoverSearchStatus(message, stateName = "") {
+  dom.coverSearchStatus.textContent = message;
+  dom.coverSearchStatus.dataset.state = stateName;
+}
+
+function resetCoverSearchSelection() {
+  selectedCoverResult = null;
+  dom.coverSearchPreview.classList.add("is-hidden");
+  dom.coverSearchPreviewImage.removeAttribute("src");
+  dom.coverSearchPreviewTitle.textContent = "";
+  dom.coverSearchPreviewMeta.textContent = "";
+  $$(".cover-result-tile", dom.coverSearchResults).forEach((tile) => {
+    tile.classList.remove("is-selected");
+    tile.setAttribute("aria-pressed", "false");
+  });
+}
+
+function renderCoverSkeletons() {
+  dom.coverSearchResults.replaceChildren(...Array.from({ length: 8 }, () => {
+    const skeleton = document.createElement("div");
+    skeleton.className = "cover-result-skeleton";
+    skeleton.setAttribute("aria-hidden", "true");
+    skeleton.innerHTML = '<span class="cover-result-skeleton__image"></span><span></span><span></span>';
+    return skeleton;
+  }));
+}
+
+function renderCoverEmpty(message = "No covers found. Try another search or upload your own image.") {
+  const empty = document.createElement("div");
+  empty.className = "cover-search-empty";
+  const icon = document.createElement("span");
+  icon.className = "cover-search-empty__icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "⌕";
+  const copy = document.createElement("p");
+  copy.textContent = message;
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "secondary-button cover-search-retry";
+  retry.textContent = "Try Again";
+  empty.append(icon, copy, retry);
+  dom.coverSearchResults.replaceChildren(empty);
+}
+
+function renderCoverResults(results) {
+  coverSearchResultsById.clear();
+  resetCoverSearchSelection();
+  if (!results.length) {
+    renderCoverEmpty();
+    setCoverSearchStatus("No matching covers were available.", "empty");
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  results.forEach((result) => {
+    coverSearchResultsById.set(String(result.coverId), result);
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "cover-result-tile";
+    tile.dataset.coverId = String(result.coverId);
+    tile.setAttribute("aria-pressed", "false");
+    tile.setAttribute("aria-label", `Select cover for ${result.title}${result.year ? `, ${result.year}` : ""}`);
+    const imageWrap = document.createElement("span");
+    imageWrap.className = "cover-result-tile__image";
+    const image = document.createElement("img");
+    image.src = coverImageUrl(result.coverId, "S");
+    image.alt = "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.draggable = false;
+    image.addEventListener("error", () => {
+      coverSearchResultsById.delete(String(result.coverId));
+      tile.remove();
+      if (!coverSearchResultsById.size) renderCoverEmpty();
+    }, { once: true });
+    const indicator = document.createElement("span");
+    indicator.className = "cover-result-tile__indicator";
+    indicator.setAttribute("aria-hidden", "true");
+    indicator.textContent = "✓";
+    imageWrap.append(image, indicator);
+    const title = document.createElement("strong");
+    title.textContent = result.title;
+    const meta = document.createElement("small");
+    meta.textContent = coverResultMeta(result) || result.author;
+    tile.append(imageWrap, title, meta);
+    fragment.append(tile);
+  });
+  dom.coverSearchResults.replaceChildren(fragment);
+  setCoverSearchStatus(`${results.length} cover${results.length === 1 ? "" : "s"} found. Choose one to preview.`, "success");
+}
+
+function abortableDelay(milliseconds, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(new DOMException("Aborted", "AbortError")); return; }
+    const timeout = window.setTimeout(resolve, milliseconds);
+    signal.addEventListener("abort", () => { window.clearTimeout(timeout); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
+  });
+}
+
+async function runCoverSearch(query = dom.coverSearchQuery.value) {
+  const normalizedQuery = String(query || "").trim().replace(/\s+/g, " ");
+  coverSearchController?.abort();
+  coverSearchController = null;
+  coverSearchRequestToken += 1;
+  if (!normalizedQuery) {
+    setCoverSearchStatus("Enter a title, and an author if you know it.", "empty");
+    renderCoverEmpty("Enter a book title above to find matching covers.");
+    dom.coverSearchQuery.focus();
+    return;
+  }
+  dom.coverSearchQuery.value = normalizedQuery;
+  const cacheKey = normalizedQuery.toLocaleLowerCase();
+  if (coverSearchCache.has(cacheKey)) {
+    renderCoverResults(coverSearchCache.get(cacheKey));
+    return;
+  }
+  const controller = new AbortController();
+  coverSearchController = controller;
+  const token = coverSearchRequestToken;
+  resetCoverSearchSelection();
+  renderCoverSkeletons();
+  setCoverSearchStatus("Searching Open Library…", "loading");
+  dom.coverSearchSubmit.disabled = true;
+  let timedOut = false;
+  try {
+    const delay = Math.max(0, COVER_SEARCH_MIN_INTERVAL - (Date.now() - coverSearchLastStartedAt));
+    if (delay) await abortableDelay(delay, controller.signal);
+    coverSearchLastStartedAt = Date.now();
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 12_000);
+    let response;
+    try {
+      response = await fetch(buildOpenLibrarySearchUrl(normalizedQuery, COVER_SEARCH_LIMIT), {
+        method: "GET", mode: "cors", credentials: "omit", signal: controller.signal, headers: { Accept: "application/json" },
+      });
+    } finally { window.clearTimeout(timeout); }
+    if (!response.ok) {
+      const error = new Error(response.status === 429 ? "Open Library is receiving many searches. Please wait a moment and try again." : "Open Library could not complete this search. Please try again.");
+      error.status = response.status;
+      throw error;
+    }
+    const payload = await response.json();
+    if (controller.signal.aborted || token !== coverSearchRequestToken) return;
+    const results = normaliseCoverSearchDocs(payload?.docs, COVER_SEARCH_LIMIT);
+    if (coverSearchCache.size >= 20) coverSearchCache.delete(coverSearchCache.keys().next().value);
+    coverSearchCache.set(cacheKey, results);
+    renderCoverResults(results);
+  } catch (error) {
+    if (error.name === "AbortError" && !timedOut) return;
+    console.warn("Cover search unavailable", error);
+    renderCoverEmpty("Covers could not be loaded. Check your connection, then try again or upload your own image.");
+    setCoverSearchStatus(timedOut ? "The search took too long. Please try again." : (error.message || "Cover search is unavailable right now."), "error");
+  } finally {
+    if (token === coverSearchRequestToken) {
+      dom.coverSearchSubmit.disabled = false;
+      if (coverSearchController === controller) coverSearchController = null;
+    }
+  }
+}
+
+function openCoverSearch() {
+  const query = [$("#book-title").value.trim(), $("#book-author").value.trim()].filter(Boolean).join(" ");
+  dom.coverSearchQuery.value = query;
+  dom.coverSearchResults.replaceChildren();
+  resetCoverSearchSelection();
+  setCoverSearchStatus(query ? "Preparing your search…" : "Enter a title, and an author if you know it.");
+  setModal(dom.coverSearchSheet, true);
+  if (query) runCoverSearch(query);
+  else window.setTimeout(() => dom.coverSearchQuery.focus(), 50);
+}
+
+function selectCoverResult(result) {
+  selectedCoverResult = result;
+  $$(".cover-result-tile", dom.coverSearchResults).forEach((tile) => {
+    const selected = tile.dataset.coverId === String(result.coverId);
+    tile.classList.toggle("is-selected", selected);
+    tile.setAttribute("aria-pressed", String(selected));
+  });
+  dom.coverSearchPreviewImage.src = coverImageUrl(result.coverId, "M");
+  dom.coverSearchPreviewTitle.textContent = result.title;
+  dom.coverSearchPreviewMeta.textContent = [result.author, coverResultMeta(result)].filter(Boolean).join(" · ");
+  dom.coverSearchPreview.classList.remove("is-hidden");
+  dom.coverSearchPreview.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "nearest" });
+  Haptics.pulse("select");
+}
+
+function validateCoverBlob(blob) {
+  if (!(blob instanceof Blob) || !blob.type.startsWith("image/") || !blob.size || blob.size > MAX_COVER_BYTES) {
+    throw new Error("This cover image could not be stored safely. Try another cover or upload an image.");
+  }
+}
+
+async function decodeImageBlob(blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function useSelectedCover() {
+  if (!selectedCoverResult || dom.useCover.disabled) return;
+  dom.useCover.disabled = true;
+  setCoverSearchStatus("Saving this cover for offline use…", "loading");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(coverImageUrl(selectedCoverResult.coverId, "M"), { mode: "cors", credentials: "omit", signal: controller.signal });
+    if (!response.ok) throw new Error("This cover is no longer available from Open Library.");
+    const blob = await response.blob();
+    validateCoverBlob(blob);
+    await decodeImageBlob(blob);
+    pendingOnlineCover = { blob, coverId: selectedCoverResult.coverId, title: selectedCoverResult.title };
+    $("#selected-cover-id").value = `openlibrary:${selectedCoverResult.coverId}:${Date.now()}`;
+    $("#book-cover").value = "";
+    $("#remove-cover").checked = false;
+    showBookCoverPreview(blob, selectedCoverResult.title, "Ready to store offline when you save the book.");
+    $("#book-form-message").textContent = "Cover ready — save the book to keep it available offline.";
+    await dismissModal(dom.coverSearchSheet);
+    Haptics.pulse("select");
+  } catch (error) {
+    console.warn("Selected cover could not be downloaded", error);
+    setCoverSearchStatus("This cover couldn’t be stored for offline use. Try another cover or upload an image from your device.", "error");
+  } finally {
+    window.clearTimeout(timeout);
+    dom.useCover.disabled = false;
+  }
+}
+
 function openBookForm(book = null) {
   dom.bookForm.reset();
+  clearPendingCoverSelection();
   $("#book-id").value = book?.id || "";
   $("#book-title").value = book?.title || "";
   $("#book-author").value = book?.author || "";
@@ -720,6 +1043,13 @@ function openBookForm(book = null) {
   $("#book-form-message").textContent = "";
   bookFormBaseline = formFingerprint(dom.bookForm);
   setModal(dom.bookSheet, true);
+  if (book?.coverId) {
+    const requestedBookId = book.id;
+    Store.readCover(book.coverId).then((blob) => {
+      if (!blob || $("#book-id").value !== requestedBookId || dom.bookSheet.classList.contains("is-hidden")) return;
+      showBookCoverPreview(blob, "Current cover", "Choose a different cover or remove this one.");
+    });
+  }
   window.setTimeout(() => $("#book-title").focus(), 100);
 }
 
@@ -739,26 +1069,32 @@ async function saveBook(event) {
   if (!Number.isInteger(currentPage) || currentPage < 0) { message.textContent = "Current page must be zero or a positive whole number."; return; }
   if (totalPages != null && currentPage > totalPages) { message.textContent = "Current page cannot be higher than total pages."; return; }
   const file = $("#book-cover").files[0];
-  if (file && (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024)) { message.textContent = "Choose an image smaller than 5 MB."; return; }
+  if (file && (!file.type.startsWith("image/") || file.size > MAX_COVER_BYTES)) { message.textContent = "Choose an image smaller than 5 MB."; return; }
   busy = true;
   try {
     const existing = getBook(id);
-    let coverId = existing?.coverId || null;
-    let coverWarning = "";
-    if (file) {
-      try { await Store.writeCover(id, file); invalidateCover(id); coverId = id; }
-      catch (error) { console.warn("Cover storage unavailable", error); coverWarning = "Book saved without its cover because image storage is unavailable."; }
-    }
-    if ($("#remove-cover").checked) { coverId = null; await Store.deleteCover(id); invalidateCover(id); }
-    await updateState((draft) => {
+    const replacementBlob = file || pendingOnlineCover?.blob || null;
+    const removeCover = $("#remove-cover").checked;
+    const coverChange = replacementBlob ? { id, blob: replacementBlob } : (removeCover ? { id, remove: true } : null);
+    const result = await Store.updateWithCover((draft, { coverStorage }) => {
       const index = draft.books.findIndex((book) => book.id === id);
+      const current = index >= 0 ? draft.books[index] : existing;
+      const coverId = removeCover ? null : (replacementBlob && coverStorage ? id : (current?.coverId || null));
       const saved = {
-        id, title, author, totalPages, currentPage, status: existing?.status || "reading", coverId,
-        totalActiveMs: existing?.totalActiveMs || 0, totalEarningsNumerator: existing?.totalEarningsNumerator || 0,
-        createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(),
+        id, title, author, totalPages, currentPage, status: current?.status || "reading", coverId,
+        totalActiveMs: current?.totalActiveMs || 0, totalEarningsNumerator: current?.totalEarningsNumerator || 0,
+        createdAt: current?.createdAt || Date.now(), updatedAt: Date.now(),
       };
       if (index >= 0) draft.books[index] = saved; else draft.books.unshift(saved);
-    });
+    }, coverChange);
+    state = result.state;
+    dom.storageWarning.classList.add("is-hidden");
+    if (coverChange) invalidateCover(id);
+    render();
+    const coverWarning = replacementBlob && !result.coverStored
+      ? (existing?.coverId ? "Book saved, but the new cover could not be stored offline. Your previous cover was kept." : "Book saved without its cover because offline image storage is unavailable.")
+      : "";
+    clearPendingCoverSelection();
     bookFormBaseline = formFingerprint(dom.bookForm);
     dismissModal(dom.bookSheet);
     selectedBookDetailId = id;
@@ -1089,6 +1425,42 @@ dom.adjustForm.addEventListener("submit", applyAdjustment);
 $("#add-book").addEventListener("click", () => openBookForm());
 $("#empty-add-book").addEventListener("click", () => openBookForm());
 dom.bookForm.addEventListener("submit", saveBook);
+$("#search-covers").addEventListener("click", openCoverSearch);
+dom.coverSearchForm.addEventListener("submit", (event) => { event.preventDefault(); runCoverSearch(); });
+dom.coverSearchResults.addEventListener("click", (event) => {
+  const retry = event.target.closest(".cover-search-retry");
+  if (retry) { runCoverSearch(); return; }
+  const tile = event.target.closest("[data-cover-id]");
+  if (!tile) return;
+  const result = coverSearchResultsById.get(tile.dataset.coverId);
+  if (result) selectCoverResult(result);
+});
+dom.useCover.addEventListener("click", useSelectedCover);
+$("#cover-search-upload").addEventListener("click", async () => {
+  await dismissModal(dom.coverSearchSheet);
+  $("#book-form-message").textContent = "Choose an image from your device, then save the book.";
+  $("#book-cover").focus({ preventScroll: true });
+});
+$("#book-cover").addEventListener("change", () => {
+  const file = $("#book-cover").files[0];
+  pendingOnlineCover = null;
+  $("#selected-cover-id").value = "";
+  $("#remove-cover").checked = false;
+  if (!file) { clearBookCoverPreview(); return; }
+  if (!file.type.startsWith("image/") || file.size > MAX_COVER_BYTES) {
+    clearBookCoverPreview();
+    $("#book-form-message").textContent = "Choose an image smaller than 5 MB.";
+    return;
+  }
+  showBookCoverPreview(file, file.name, "Ready to store offline when you save the book.");
+  $("#book-form-message").textContent = "Image ready — save the book to keep it available offline.";
+});
+$("#remove-cover").addEventListener("change", () => {
+  if (!$("#remove-cover").checked) return;
+  $("#book-cover").value = "";
+  clearPendingCoverSelection();
+  $("#book-form-message").textContent = "The current cover will be removed when you save the book.";
+});
 dom.bookGrid.addEventListener("click", (event) => { const tile = event.target.closest("[data-open-book]"); if (tile) openBookDetail(tile.dataset.openBook); });
 dom.detailView.addEventListener("click", async (event) => {
   const action = event.target.closest("[data-detail-action]")?.dataset.detailAction;
@@ -1185,7 +1557,11 @@ $("#dismiss-install-guide").addEventListener("click", async () => { await update
 
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { render(); WakeLock.sync(); checkReminder(); } else WakeLock.release(); });
 window.addEventListener("pageshow", () => { render(); WakeLock.sync(); });
-window.addEventListener("beforeunload", () => { coverUrls.forEach((url) => URL.revokeObjectURL(url)); });
+window.addEventListener("beforeunload", () => {
+  coverUrls.forEach((url) => URL.revokeObjectURL(url));
+  if (pendingCoverPreviewUrl) URL.revokeObjectURL(pendingCoverPreviewUrl);
+  coverSearchController?.abort();
+});
 document.addEventListener("keydown", (event) => {
   const open = $$('.modal-backdrop:not(.is-hidden)').at(-1);
   if (!open) return;
